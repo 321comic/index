@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>漫畫職涯互動測驗</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: auto; padding: 1em; font-size: 18px; line-height: 1.6; }
+    .question { display: none; margin-bottom: 20px; }
+    .active { display: block; }
+    button { margin-top: 10px; display: block; padding: 0.5em; font-size: 1em; width: 100%; }
+    #result { display: none; }
+    canvas { max-width: 100%; margin-top: 1em; }
+    #progress { margin-bottom: 1em; font-weight: bold; }
+  </style>
+</head>
+<body>
+<h1>🎨 漫畫職涯互動測驗</h1>
+<div id="progress">第 1 / 6 題</div>
+<form id="quizForm">
+  <div class="question active" data-index="0">
+    <p>Q1. 你覺得自己的繪畫技巧如何？</p>
+    <button type="button" data-score="1" data-attr="draw">✏️ 線條不穩定</button>
+    <button type="button" data-score="2" data-attr="draw">📄 線條穩定</button>
+    <button type="button" data-score="3" data-attr="draw">🖍️ 完成 30 頁以下漫畫</button>
+    <button type="button" data-score="5" data-attr="draw">🖼️ 完成 超過30 頁漫畫</button>
+  </div>
+  <div class="question" data-index="1">
+    <p>Q2. 你創作過完整的劇情或角色設定嗎？</p>
+    <button type="button" data-score="1" data-attr="story">🪶 幾乎沒寫過</button>
+    <button type="button" data-score="2" data-attr="story">🌀 偶爾會設定</button>
+    <button type="button" data-score="3" data-attr="story">📘 寫過完整設定</button>
+    <button type="button" data-score="5" data-attr="story">📖 寫過完整設定並完稿</button>
+  </div>
+  <div class="question" data-index="2">
+    <p>Q3. 你作品的創作頻率如何？</p>
+    <button type="button" data-score="1" data-attr="update">🐢 30天更新1次</button>
+    <button type="button" data-score="2" data-attr="update">📆 30天更新2次</button>
+    <button type="button" data-score="3" data-attr="update">🧭 30天更新4次</button>
+    <button type="button" data-score="5" data-attr="update">🏃 30天更新8次</button>
+  </div>
+  <div class="question" data-index="3">
+    <p>Q4. 你對經營社群平台有興趣嗎？</p>
+    <button type="button" data-score="1" data-attr="sns">🚫 幾乎不更新</button>
+    <button type="button" data-score="2" data-attr="sns">🫥 偶爾發作品</button>
+    <button type="button" data-score="3" data-attr="sns">📢 有固定更新</button>
+    <button type="button" data-score="5" data-attr="sns">🎯 有穩定追蹤者，並會互動</button>
+  </div>
+  <div class="question" data-index="4">
+    <p>Q5. 有多少人知道你的作品？</p>
+    <button type="button" data-score="1" data-attr="fame">🤷 幾乎沒人知道</button>
+    <button type="button" data-score="2" data-attr="fame">👀 同學或社群有看過</button>
+    <button type="button" data-score="3" data-attr="fame">🌟 有群組或網站讀者</button>
+    <button type="button" data-score="5" data-attr="fame">🔥 粉絲數破千、參加過展會</button>
+  </div>
+  <div class="question" data-index="5">
+    <p>Q6. 遇到截稿壓力，你通常的反應是？</p>
+    <button type="button" data-score="1" data-attr="stress">😖 常常拖稿</button>
+    <button type="button" data-score="2" data-attr="stress">😵‍💫 偶爾拖稿</button>
+    <button type="button" data-score="3" data-attr="stress">💪 撐著趕完但很累</button>
+    <button type="button" data-score="5" data-attr="stress">🧘 壓力可控但影響心情</button>
+  </div>
+</form>
+<div id="result">
+  <h2>🎯 你的漫畫職涯建議：</h2>
+  <p id="jobResult"></p>
+  <img id="jobImage" src="" alt="職業圖片" />
+  <canvas id="radarChart"></canvas>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const answers = {}; let totalScore = 0;
+const jobData = [
+  {
+    name: "連載漫畫家",
+    tag: "高抗壓執行者",
+    desc: "你擁有穩定產出與抗壓能力，是連載壓力下仍能堅持的創作戰士。",
+    suggestion: "嘗試連載平台投稿、參加漫畫獎或與編輯建立合作關係",
+    partner: "編輯、漫畫助手",
+    img: "https://321comic.com/wp-content/uploads/2025/05/1e980a3e8bc89e6bcabe795abe5aeb6-2.png?w=NaN&h="
+  },
+  {
+    name: "單行本漫畫家",
+    tag: "文藝構築者",
+    desc: "你的創作更重完整性與品質，適合將完整故事集結出版。",
+    suggestion: "持續累積作品，目標出版單行本，並尋找圖書出版社相關資源",
+    partner: "原作編劇、插畫家",
+    img: "https://321comic.com/wp-content/uploads/2025/05/2e596aee8a18ce69cace6bcabe795abe5aeb6-2.png?w=NaN&h="
+  },
+  {
+    name: "代工漫畫家",
+    tag: "技巧專精者",
+    desc: "你的繪圖技巧純熟穩定，適合承接指定風格的專業代工。",
+    suggestion: "累積穩定的畫風與效率，考慮與編輯或出版社合作代工案",
+    partner: "主筆漫畫家",
+    img: "https://321comic.com/wp-content/uploads/2025/05/3e4bba3e5b7a5e6bcabe795abe5aeb6-1.png?w=NaN&h="
+  },
+{
+  name: "網紅漫畫家",
+  tag: "人氣創造者",
+  desc: "你擁有高社群互動力，適合以個人魅力吸引關注，建立粉絲社群。",
+  suggestion: "持續經營社群帳號，結合話題創作與互動以擴大人氣",
+  partner: "自媒體插畫家",
+  img: "https://321comic.com/wp-content/uploads/2025/05/4e7b6b2e7b485e6bcabe795abe5aeb6-2.png?w=NaN&h="
+},
+{
+  name: "兼職漫畫家／插畫家",
+  tag: "斜槓奔忙者",
+  desc: "你擁有多方技能，能靈活調度各類任務，是時間管理與執行力兼具者。",
+  suggestion: "建立自媒體帳號，紀錄斜槓創作與工作歷程",
+  partner: "接案插畫家",
+  img: "https://321comic.com/wp-content/uploads/2025/05/5e585bce881b7e6bcabe795abe5aeb6-2.png?w=NaN&h="
+},
+{
+  name: "漫畫家助手",
+  tag: "幕後支援者",
+  desc: "你具備穩定協作力與細膩技巧，適合支援主筆完成作品。",
+  suggestion: "讓漫畫家介紹漫畫家累積經驗，也能自學提升繪圖與上色技能",
+  partner: "連載漫畫家",
+  img: "https://321comic.com/wp-content/uploads/2025/05/6e6bcabe795abe5aeb6e58aa9e6898b-2.png?w=NaN&h="
+},
+{
+  name: "漫畫經理／編輯",
+  tag: "推進規劃者",
+  desc: "你擅長溝通協調與時間控管，能整合資源讓作品順利誕生。",
+  suggestion: "發展專案企劃、提案、腳本溝通與分鏡審查，培養跨部門合作力",
+  partner: "連載漫畫家、原作編劇",
+  img: "https://321comic.com/wp-content/uploads/2025/05/7e6bcabe795abe7b693e79086-2.png?w=NaN&h="
+},
+{
+  name: "原作編劇",
+  tag: "創意引爆者",
+  desc: "你擅長構思劇情與角色世界觀，是故事起點的靈魂人物。",
+  suggestion: "進一步學習劇本編寫、文本轉換與腳本格式訓練",
+  partner: "單行本漫畫家",
+  img: "https://321comic.com/wp-content/uploads/2025/05/8e58e9fe4bd9ce7b7a8e58a87-2.png?w=NaN&h="
+},
+{
+  name: "漫畫老師",
+  tag: "教學傳承者",
+  desc: "你有耐心與教學熱情，適合將知識與經驗傳授給下一代創作者。",
+  suggestion: "可至才藝班或校園授課，並整理教學素材開設線上課程",
+  partner: "學生、助教",
+  img: "https://321comic.com/wp-content/uploads/2025/05/9e6bcabe795abe88081e5b8ab-2.png?w=NaN&h="
+},
+{
+  name: "接案插畫家",
+  tag: "穩健接單者",
+  desc: "你具有繪圖技術與穩定交件能力，是客戶信賴的創作夥伴。",
+  suggestion: "經營個人網站或作品集，拓展委託管道與接案平台",
+  partner: "兼職插畫家",
+  img: "https://321comic.com/wp-content/uploads/2025/05/10e68ea5e6a188e68f92e795abe5aeb6-2.png?w=NaN&h="
+},
+{
+  name: "自媒體插畫創作者",
+  tag: "個人品牌經營者",
+  desc: "你擅長內容包裝與社群經營，適合打造個人風格並拓展粉絲圈。",
+  suggestion: "結合創作直播與短影音擴大觸及，經營個人品牌",
+  partner: "網紅漫畫家",
+  img: "https://321comic.com/wp-content/uploads/2025/05/11e887aae5aa92e9ab94e68f92e795abe589b5e4bd9ce88085-2.png?w=NaN&h="
+},
+{
+  name: "簽約插畫家",
+  tag: "穩定合作型人才",
+  desc: "你具備合作溝通與穩定產出的能力，適合與出版單位長期合作。",
+  suggestion: "與出版社洽談長期合作，提供穩定風格與繳稿紀律",
+  partner: "編輯、文案",
+  img: "https://321comic.com/wp-content/uploads/2025/05/12e7b0bde7b484e68f92e795abe5aeb6-2.png?w=NaN&h="
+}
+];
+
+function calculateJob() {
+  const d = answers.draw || 0;
+  const s = answers.story || 0;
+  const u = answers.update || 0;
+  const sns = answers.sns || 0;
+  const fame = answers.fame || 0;
+  const stress = answers.stress || 0;
+  const total = d + s + u + sns + fame + stress; // ✅ 記得放在這裡！
+
+  let best = jobData[5]; // 預設為漫畫家助手
+  let matched = false;
+
+  if (d >= 5 && s >= 5 && u >= 5 && stress >= 5) {
+    best = jobData[0]; matched = true; // 連載漫畫家
+  } else if (!matched && d >= 4 && s >= 4) {
+    best = jobData[1]; matched = true; // 單行本漫畫家
+  } else if (!matched && d >= 4 && s <= 3) {
+    best = jobData[2]; matched = true; // 代工漫畫家
+  } else if (!matched && sns >= 5 && fame >= 5) {
+    best = jobData[3]; matched = true; // 網紅漫畫家
+  } else if (!matched && sns >= 4 && d >= 3) {
+    best = jobData[10]; matched = true; // 自媒體插畫創作者
+  } else if (!matched && d >= 3 && s >= 3 && u >= 3 && stress <= 2) {
+    best = jobData[7]; matched = true; // 原作編劇
+  } else if (!matched && d <= 2 && s <= 2 && stress >= 4) {
+    best = jobData[5]; matched = true; // 漫畫家助手
+  } else if (!matched && stress >= 4 && u >= 3 && fame >= 3) {
+    best = jobData[6]; matched = true; // 漫畫經理／編輯
+  } else if (!matched && d >= 2 && s >= 2 && stress >= 4) {
+    best = jobData[4]; matched = true; // 兼職漫畫家／插畫家
+  } else if (!matched && d >= 3 && stress >= 3 && fame >= 2) {
+    best = jobData[9]; matched = true; // 接案插畫家
+  } else if (!matched && d >= 3 && sns >= 3 && fame >= 3) {
+    best = jobData[11]; matched = true; // 簽約插畫家
+  } else if (!matched && d >= 2 && s >= 2 && stress >= 2 && fame >= 2) {
+    best = jobData[8]; matched = true; // 漫畫老師
+  }
+
+  document.getElementById('jobResult').innerHTML = `
+     🔢 總分：${total} / 30 分<br> 職業名稱：<strong>${best.name}</strong><br>人格標籤：${best.tag}<br>職涯說明：${best.desc}<br>職涯建議：${best.suggestion}<br>合拍對象：${best.partner}
+  `;
+  document.getElementById('jobImage').src = best.img;
+
+  const ctx = document.getElementById('radarChart');
+  new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: ['繪畫技術力', '劇情創作力', '更新穩定度', '社群經營力', '知名度', '抗壓性'],
+      datasets: [{
+        label: '你的能力評估',
+        data: [d, s, u, sns, fame, stress],
+        fill: true,
+        tension: 0.2
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: { r: { beginAtZero: true, max: 5 } }
+    }
+  });
+}
+
+
+document.querySelectorAll('button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const score = parseInt(btn.dataset.score);
+    const attr = btn.dataset.attr;
+    const parent = btn.closest('.question');
+    const index = parseInt(parent.dataset.index);
+    if(attr) {
+      if (!answers[attr]) answers[attr] = 0;
+      answers[attr] += score;
+    }
+    parent.classList.remove('active');
+    const next = document.querySelector(`.question[data-index='${index + 1}']`);
+    document.getElementById("progress").textContent = `第 ${index+2} / 6 題`;
+    if (next) next.classList.add('active');
+    else {
+      document.getElementById('quizForm').style.display = 'none';
+      document.getElementById('result').style.display = 'block';
+      calculateJob();
+    }
+  });
+});
+</script>
+</body>
+</html>
